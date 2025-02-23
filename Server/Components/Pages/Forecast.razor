@@ -1,0 +1,218 @@
+﻿@page "/forecast"
+@using HomeEnergy.Services
+@using System.Text.Json
+@using ApexCharts
+@inject EnergyForecastService EnergyForecast
+
+<ApexChart TItem="TimePeriodResult"
+           Title="Energy forecast"
+           Options="options"
+           Height="@("950px")"
+           XAxisType="XAxisType.Datetime">
+
+
+
+    <ApexPointSeries TItem="TimePeriodResult"
+                     Items="Data"
+                     Color="#ffff0066"
+                     Name="Solar forecast"
+                     SeriesType="SeriesType.Area"
+                     XValue="e => e.Time"
+                     YValue="e=> (decimal?)e.PredictedSolar" />
+
+    <ApexPointSeries TItem="TimePeriodResult"
+                     Items="Data"
+                     Color="#a0a0a0"
+                     Name="Day Ahead Price"
+                     Hidden="true"
+                     SeriesType="SeriesType.Line"
+                     XValue="e => e.Time"
+                     YValue="e=> (decimal?)e.DayAheadPrice" />
+
+
+    @for (var i = 0; i < Data[0].ElectricVehicles.Count; i++)
+    {
+        int capturedI = i;
+        <ApexPointSeries TItem="TimePeriodResult"
+                         Items="Data"
+                         Name="@($"{Data[0].ElectricVehicles[capturedI].Name} SoC")"
+                         Color="#a0522d"
+                         SeriesType="SeriesType.Line"
+                         XValue="e => e.Time"
+                         YValue="e=> (decimal?)e.ElectricVehicles[capturedI].StateOfChargePercentage" />
+    }
+
+
+    @for (var i = 0; i < Data[0].Batteries.Count; i++)
+    {
+        int capturedI = i;
+        <ApexPointSeries TItem="TimePeriodResult"
+                         Items="Data"
+                         Name="@GetBatteryName(capturedI, "SoC")"
+                         Color="#0000ff"
+                         SeriesType="SeriesType.Line"
+                         XValue="e => e.Time"
+                         YValue="e=> (decimal?)e.Batteries[capturedI].StateOfChargePercentage" />
+    }
+
+
+    <ApexPointSeries TItem="TimePeriodResult"
+                     Items="Data"
+                     Name="House consumption"
+                     Color="#FF69B4"
+                     Group="use_energy"
+                     SeriesType="SeriesType.Bar"
+                     XValue="e => e.Time"
+                     YValue="e=> (decimal?)e.HouseConsumption" />
+    <ApexPointSeries TItem="TimePeriodResult"
+                     Items="Data"
+                     Name="Heat pump consumption"
+                     Color="#FFA500"
+                     Group="use_energy"
+                     SeriesType="SeriesType.Bar"
+                     XValue="e => e.Time"
+                     YValue="e=> (decimal?)e.HeatPumpUsagePower" />
+
+    @for (var i = 0; i < Data[0].ElectricVehicles.Count; i++)
+    {
+        int capturedI = i;
+        <ApexPointSeries TItem="TimePeriodResult"
+                         Items="Data"
+                         Name="@($"{Data[0].ElectricVehicles[capturedI].Name} Power")"
+                         Color="#a0522d"
+                         Group="use_energy"
+                         SeriesType="SeriesType.Bar"
+                         XValue="e => e.Time"
+                         YValue="e=> (decimal?)e.ElectricVehicles[capturedI].ChargePower" />
+    }
+
+    @for (var i = 0; i < Data[0].Batteries.Count; i++)
+    {
+        int capturedI = i;
+        <ApexPointSeries TItem="TimePeriodResult"
+                         Items="Data"
+                         Name="@GetBatteryName(capturedI, "charge")"
+                         Color="#0000ff"
+                         Group="use_energy"
+                         SeriesType="SeriesType.Bar"
+                         XValue="e => e.Time"
+                         YValue="e=> (decimal?)e.Batteries[capturedI].ChargePower" />
+        <ApexPointSeries TItem="TimePeriodResult"
+                         Items="Data"
+                         Group="produce_energy"
+                         Color="#8f00ff"
+                         Name="@GetBatteryName(capturedI, "discharge")"
+                         SeriesType="SeriesType.Bar"
+                         XValue="e => e.Time"
+                         YValue="e=> (decimal?)e.Batteries[capturedI].DischargePower" />
+    }
+
+    <ApexPointSeries TItem="TimePeriodResult"
+                     Items="Data"
+                     Group="produce_energy"
+                     Name="Grid Import"
+                     Color="#ff0000"
+                     SeriesType="SeriesType.Bar"
+                     XValue="e => e.Time"
+                     YValue="e=> (decimal?)e.GridImportPower" />
+    <ApexPointSeries TItem="TimePeriodResult"
+                     Items="Data"
+                     Color="#00ff00"
+                     Group="use_energy"
+                     Name="Grid Export"
+                     SeriesType="SeriesType.Bar"
+                     XValue="e => e.Time"
+                     YValue="e=> (decimal?)e.GridExportPower" />
+</ApexChart>
+
+@code
+{
+    private List<TimePeriodResult> Data { get; set; } = new();
+    ApexChartOptions<TimePeriodResult> options = new() {
+            Legend = new Legend() {
+                ClusterGroupedSeries = false
+            },
+            Tooltip = new Tooltip() {
+                X = new TooltipX() {
+                    Format = "dd MMM HH:mm"
+                }
+            },
+            Xaxis = new XAxis() {
+                Labels = new XAxisLabels() {
+                    DatetimeUTC = false
+                }
+            },
+            Yaxis = [
+                                                                                         new YAxis()
+                 {
+                      Labels = new YAxisLabels()
+                      {
+                          Formatter = @"function (value) {
+                    return value.toLocaleString('sl-SI', { maximumFractionDigits: 2, minimumFractionDigits: 2 }) + ' kW';}"
+                      },
+                      Min=0m,
+                      SeriesName=new SeriesName("Solar forecast", "Grid Import", "ID.3 Power", "Grid Export", "House consumption", "Heat pump consumption", "Battery charge", "Battery discharge")
+                 },
+                         new YAxis()
+                 {
+                      Opposite=true,
+                      SeriesName="Day Ahead Price",
+                      Labels=new YAxisLabels(){
+                          Formatter=@"function (value) {
+                            return (value * 1000) + ' €  ';}"
+                      },
+                      Min=0m
+                 },
+                 new YAxis()
+                 {
+                      SeriesName=new SeriesName("Battery SoC", "ID.3 SoC"),
+                      Min=0m,
+                      Max=1m,
+                      AxisBorder=new (){
+                           Show=false
+                      },
+                      AxisTicks=new(){
+                           Show=false
+                      },
+                      Labels=new(){
+                          Show=false,
+                          Formatter=@"function (value) {
+                            return (value * 100).toLocaleString('sl-SI', { maximumFractionDigits: 2, minimumFractionDigits: 2 }) + ' %';}"
+                      },
+                      Title=new (){
+                                                      Text=""
+                      }
+                 }
+                                                                                    ],
+            Chart = new Chart() {
+                Background = "transparent",
+                StackOnlyBar = true,
+                Stacked = true
+            }
+        };
+
+    private string GetBatteryName(int index, string suffix)
+    {
+        if (Data[0].Batteries.Count == 1)
+            return $"Battery {suffix}";
+        return $"Battery {index + 1} {suffix}";
+    }
+
+    static string GetYAxisLabel(decimal value)
+    {
+        return $"{value:0.00 kW}";
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Refresh();
+    }
+
+    async void Refresh()
+    {
+        var data = await EnergyForecast.GetEnergyForecastAsync();
+        Data = data.TimePeriods;
+        StateHasChanged();
+    }
+}

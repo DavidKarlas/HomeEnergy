@@ -1,0 +1,25 @@
+﻿@using HomeEnergy.Devices
+@using System.Text.Json
+@using HomeEnergy.Devices.Implementations.Inverters
+@using HomeEnergy.Devices.Implementations.MeteringDevices
+
+@implements IDeviceFactorySettingsUI
+
+<MudForm>
+    <MudTextField Label="Shelly IP" @bind-Value="shellySettings.IpAddress" Required="true" RequiredError="IP Address is required!" />
+</MudForm>
+
+@code {
+    ShellySettings shellySettings = new();
+    public string SettingsJson
+    {
+        get
+        {
+            return JsonSerializer.Serialize(shellySettings);
+        }
+        set
+        {
+            shellySettings = JsonSerializer.Deserialize<ShellySettings>(SettingsJson)!;
+        }
+    }
+}

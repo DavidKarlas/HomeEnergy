@@ -1,0 +1,26 @@
+﻿::deep g.neutral-device-link {
+    stroke-dasharray: 5;
+    stroke: gray;
+}
+
+::deep g.positive-device-link {
+    stroke-dasharray: 5;
+    animation: dash .5s linear infinite;
+    stroke: green;
+}
+@keyframes dash {
+    to {
+        stroke-dashoffset: 10;
+    }
+}
+
+::deep g.negative-device-link {
+    stroke-dasharray: 5;
+    animation: reversed-dash .5s linear infinite;
+    stroke: red;
+}
+@keyframes reversed-dash {
+    to {
+        stroke-dashoffset: -10;
+    }
+}

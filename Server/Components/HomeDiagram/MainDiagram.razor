@@ -1,0 +1,90 @@
+﻿@using Blazor.Diagrams
+@using Blazor.Diagrams.Components
+@using Blazor.Diagrams.Core.Anchors
+@using Blazor.Diagrams.Core.Geometry
+@using Blazor.Diagrams.Core.Models
+@using Blazor.Diagrams.Core.PathGenerators
+@using Blazor.Diagrams.Core.Routers
+@using Blazor.Diagrams.Options
+@using HomeEnergy.Components.HomeDiagram.Views
+@using HomeEnergy.Devices.Interfaces
+@using HomeEnergy.Services
+@inject DevicesManager DevicesManager
+
+<div class="diagram-container" style="width: 100%; height: 100vh;">
+    <CascadingValue Value="Diagram" IsFixed="true">
+        <DiagramCanvas></DiagramCanvas>
+    </CascadingValue>
+</div>
+@code {
+    private BlazorDiagram Diagram { get; set; } = null!;
+
+    protected override void OnInitialized()
+    {
+        var options = new BlazorDiagramOptions {
+                AllowMultiSelection = true,
+                Zoom = {
+                Enabled = false,
+            },
+                Links = {
+                DefaultRouter = new OrthogonalRouter(),
+                DefaultPathGenerator = new SmoothPathGenerator()
+            },
+                GridSize = 20,
+                GridSnapToCenter = true,
+                AllowPanning = false
+            };
+        Diagram = new BlazorDiagram(options);
+        Diagram.RegisterComponent<DeviceNodeModel, DeviceWidget>();
+        Diagram.RegisterComponent<DeviceLinkModel, DeviceLinkWidget>();
+
+        var solarNode = Diagram.Nodes.Add(new DeviceNodeModel() {
+                Position = new Point(396, 34),
+                Title = "Solar",
+                Icon = Icons.Material.Filled.WbSunny,
+                Meters = DevicesManager.GetDevices().OfType<IMeteringDevice>().SelectMany(d => d.AllMeters).Where(m => m.PreferredMeterType == MeterType.Solar).ToArray()
+            });
+        var gridNode = Diagram.Nodes.Add(new DeviceNodeModel() {
+                Position = new Point(61, 34),
+                Title = "Grid",
+                Icon = Icons.Material.Filled.Power,
+                Meters = DevicesManager.GetDevices().OfType<IMeteringDevice>().SelectMany(d => d.AllMeters).Where(m => m.PreferredMeterType == MeterType.Grid).ToArray()
+            });
+        var houseNode = Diagram.Nodes.Add(new DeviceNodeModel() {
+                Position = new Point(190, 194),
+                Title = "House",
+                Icon = Icons.Material.Filled.Home,
+                Meters = DevicesManager.GetDevices().OfType<IMeteringDevice>().SelectMany(d => d.AllMeters).Where(m => m.PreferredMeterType == MeterType.House).ToArray()
+            });
+        var batteryNode = Diagram.Nodes.Add(new DeviceNodeModel() {
+                Position = new Point(387, 194),
+                Title = "Battery",
+                Icon = Icons.Material.Filled.BatteryChargingFull,
+                Meters = DevicesManager.GetDevices().OfType<IMeteringDevice>().SelectMany(d => d.AllMeters).Where(m => m.PreferredMeterType == MeterType.Battery).ToArray()
+            });
+        var evChargerNode = Diagram.Nodes.Add(new DeviceNodeModel() {
+                Position = new Point(33, 354),
+                Title = "HVAC",
+                Icon = Icons.Material.Filled.AcUnit,
+                Meters = DevicesManager.GetDevices().OfType<IMeteringDevice>().SelectMany(d => d.AllMeters).Where(m => m.PreferredMeterType == MeterType.HVAC).ToArray()
+            });
+        var hvacNode = Diagram.Nodes.Add(new DeviceNodeModel() {
+                Position = new Point(349, 354),
+                Title = "EV Charger",
+                Icon = Icons.Material.Filled.ElectricCar
+            });
+        var sourceAnchor = new ShapeIntersectionAnchor(houseNode);
+        var solarLink = Diagram.Links.Add(new DeviceLinkModel("solar", sourceAnchor, new ShapeIntersectionAnchor(solarNode)));
+        var gridLink = Diagram.Links.Add(new DeviceLinkModel("grid", sourceAnchor, new ShapeIntersectionAnchor(gridNode)));
+        var batteryLink = Diagram.Links.Add(new DeviceLinkModel("battery", sourceAnchor, new ShapeIntersectionAnchor(batteryNode)));
+        var evChargerLink = Diagram.Links.Add(new DeviceLinkModel("evCharger", sourceAnchor, new ShapeIntersectionAnchor(evChargerNode)));
+        var hvacLink = Diagram.Links.Add(new DeviceLinkModel("hvac", sourceAnchor, new ShapeIntersectionAnchor(hvacNode)));
+
+        foreach (var node in Diagram.Nodes)
+        {
+            node.Moved += (model) => {
+                System.Diagnostics.Debug.WriteLine($"{node.Title}: X:{model.Position.X} Y:{model.Position.Y}");
+            };
+        }
+    }
+}

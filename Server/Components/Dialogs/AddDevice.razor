@@ -1,0 +1,61 @@
+﻿@using HomeEnergy.Devices
+@inject Services.DevicesManager DevicesManager
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField Label="Device Name" @bind-Value="DeviceName" />
+        <MudSelect @bind-Value="FactoryId" Label="Device type">
+            @foreach (var factory in DevicesManager.GetAllDeviceFactories().Values)
+            {
+                <MudSelectItem Value="@factory.FactoryId">@factory.Name</MudSelectItem>
+            }
+        </MudSelect>
+        @if (SettingsComponentType != null)
+        {
+            <DynamicComponent @ref="settingUI" Type="SettingsComponentType" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Add</MudButton>
+    </DialogActions>
+</MudDialog>
+@code {
+    private DynamicComponent? settingUI { get; set; }
+    private string DeviceName { get; set; }
+    private string factoryId;
+    private string FactoryId
+    {
+        get => factoryId;
+        set
+        {
+            factoryId = value;
+            if (DevicesManager.GetAllDeviceFactories().TryGetValue(value, out var factory))
+            {
+                SettingsComponentType = factory.SettingsRazorComponent;
+            }
+            else
+            {
+                SettingsComponentType = null;
+            }
+        }
+    }
+
+    Type? SettingsComponentType { get; set; }
+
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    private async Task Submit()
+    {
+        if (!DevicesManager.GetAllDeviceFactories().TryGetValue(FactoryId, out var factory))
+        {
+            return;
+        }
+        var device = factory.CreateNewDevice(DeviceName, ((IDeviceFactorySettingsUI)settingUI.Instance).SettingsJson);
+        await DevicesManager.AddDevice(device);
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

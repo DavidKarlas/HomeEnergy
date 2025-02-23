@@ -1,0 +1,25 @@
+﻿@using HomeEnergy.Devices
+@using System.Text.Json
+@using HomeEnergy.Devices.Implementations.Inverters
+
+@implements IDeviceFactorySettingsUI
+
+<MudForm>
+    <MudTextField Label="Modbus IP" @bind-Value="inverterSettings.IpAddress" Required="true" RequiredError="IP Address is required!" />
+    <MudTextField Label="Modbus Port" @bind-Value="inverterSettings.Port" Required="true" RequiredError="Port is required!" />
+</MudForm>
+
+@code {
+    DeyeInverterSettings inverterSettings = new();
+    public string SettingsJson
+    {
+        get
+        {
+            return JsonSerializer.Serialize(inverterSettings);
+        }
+        set
+        {
+            inverterSettings = JsonSerializer.Deserialize<DeyeInverterSettings>(SettingsJson)!;
+        }
+    }
+}
